@@ -68,12 +68,15 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private float touchY;
     private float motionDownXPosition;
     private float motionDownYPosition;
+    private int playerHeight;
+    //private GestureDetector gestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_player);
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        //gestureDetector = new GestureDetector(this, new MyGesture());
         findIds();
         clickListener();
         callVideoApi();
@@ -108,9 +111,14 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:
                         motionDownXPosition = event.getX();
                         motionDownYPosition = event.getY();
+                        playerHeight = simpleExoPlayerView.getHeight();
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        controlVolume(event);
+                        if(event.getX() > getScreenHeightWidth()[0]/2){ //right
+                            controlVolume(event);
+                        }else if(event.getX() < getScreenHeightWidth()[0]/2){  //left
+
+                        }
                         break;
                     case MotionEvent.ACTION_UP:
                         motionDownXPosition = 0;
@@ -118,6 +126,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         simpleExoPlayerView.showController();
                         break;
                 }
+                //return gestureDetector.onTouchEvent(event);
                 return true;
             }
         });
@@ -290,17 +299,45 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
 
     private void controlVolume(MotionEvent event) {
-
-
+        int threshold = 30;
+        int swipeDifference = (int) (motionDownYPosition - event.getY());
+        if(swipeDifference % threshold == 0){
+            simpleExoPlayerView.showController();
+            int mediavolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            int newMediaVolume = mediavolume + (swipeDifference/threshold);
+            if (newMediaVolume > maxVol) {
+                newMediaVolume = maxVol;
+            } else if (newMediaVolume < 1) {
+                newMediaVolume = 0;
+            }
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newMediaVolume, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+            counter.setText(String.valueOf(newMediaVolume));
+            motionDownYPosition = event.getY();
+        }
+        Log.d("allstuff", motionDownYPosition + " " + event.getY() + " " + swipeDifference + " " + audioManager.getStreamVolume(AudioManager.STREAM_MUSIC));
     }
 
     private int[] getScreenHeightWidth() {
         int[] heightWidth = new int[2];
         Point size = new Point();
         getWindowManager().getDefaultDisplay().getSize(size);
-        heightWidth[0] = size.x;
-        heightWidth[1] = size.y;
+        heightWidth[0] = size.x;  //width
+        heightWidth[1] = size.y;  //height
         return heightWidth;
     }
+
+
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//    class MyGesture extends GestureDetector.SimpleOnGestureListener{
+//        @Override
+//        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+//            Log.d("typso", String.valueOf(e1.getY()) +  "  " +  String.valueOf(e2.getY()));
+//            return true;
+//        }
+//    }
 
 }
