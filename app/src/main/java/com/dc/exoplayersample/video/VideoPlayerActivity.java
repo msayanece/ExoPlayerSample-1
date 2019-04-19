@@ -12,6 +12,7 @@ import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.constraint.ConstraintSet;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -78,11 +79,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_player);
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        try {
-            brightness = Settings.System.getInt(getContentResolver(), Settings.System.SCREEN_BRIGHTNESS);
-        } catch (Settings.SettingNotFoundException e) {
-            e.printStackTrace();
-        }
+        brightness = 100;
         //gestureDetector = new GestureDetector(this, new MyGesture());
         findIds();
         clickListener();
@@ -272,7 +269,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         int mediavolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int newMediaVolume = mediavolume;
-        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume);
+        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume,24);
         if (newMediaVolume > maxVol) {
             newMediaVolume = maxVol;
         } else if (newMediaVolume < 1) {
@@ -284,24 +281,29 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void controlBrightness(MotionEvent event) {
-//        int newBrightness = brightness;
-//        newBrightness = getNewSwipedValue(event, brightness, newBrightness);
-//        brightness = newBrightness;
-//        if (newBrightness > 255) {
-//            newBrightness = 255;
-//        } else if (newBrightness < 1) {
-//            newBrightness = 1;
-//        }
-//        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
-//        layoutParams.screenBrightness = newBrightness/100;
-//        getWindow().setAttributes(layoutParams);
-//        counter.setText(String.valueOf(newBrightness));
-//
-//
+        int newBrightness = brightness;
+        newBrightness = getNewSwipedValue(event, brightness, newBrightness,100);
+        if (newBrightness > 100) {
+            newBrightness = 100;
+        } else if (newBrightness < 1) {
+            newBrightness = 1;
+        }
+        WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
+        layoutParams.screenBrightness = (float) newBrightness / 100;
+        getWindow().setAttributes(layoutParams);
+        if(newBrightness/6 >= 15){
+            counter.setText("15");
+        }else if(newBrightness/6 <= 1){
+            counter.setText("1");
+        }else{
+            counter.setText(String.valueOf(newBrightness/6));
+        }
+        brightness = newBrightness;
+
     }
 
-    private int getNewSwipedValue(MotionEvent event, int value, int newValue) {
-        int threshold = playerHeight / 24;
+    private int getNewSwipedValue(MotionEvent event, int value, int newValue,int pixelDiff) {
+        int threshold = playerHeight / pixelDiff;
         int swipeDifference = 0;
         bottomContainer.setVisibility(View.GONE);
         playPause.setVisibility(View.GONE);
@@ -322,6 +324,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 simpleExoPlayerView.showController();
             }
         }
+        Log.d("vol", String.valueOf(value) + " " + String.valueOf(newValue) + " " + String.valueOf(swipeDifference / threshold));
         return newValue;
     }
 
