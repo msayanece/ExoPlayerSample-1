@@ -73,6 +73,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private boolean isPlaying = true;
     private boolean isControlLocked = false;
     private int brightness = 0;
+    private boolean isHorizontalScrolling = false;
+    private boolean isVerticalScrolling = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +110,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         });
 
         simpleExoPlayerView.setOnTouchListener(new View.OnTouchListener() {
+
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -117,13 +120,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         playerHeight = simpleExoPlayerView.getHeight();
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        if (event.getX() > getScreenHeightWidth()[0] / 2) { //right
-                            isControllingVolume = true;
-                            controlVolume(event);
-                        } else if (event.getX() < getScreenHeightWidth()[0] / 2) {  //left
-                            isControllingBrightness = true;
-                            controlBrightness(event);
-                        }
+                        handleTouchEvent(event);
                         break;
                     case MotionEvent.ACTION_UP:
                         isControllingVolume = false;
@@ -132,14 +129,42 @@ public class VideoPlayerActivity extends AppCompatActivity {
                             controllerVisibility();
                             simpleExoPlayerView.showController();
                         }
+                        if (isPlaying) {
+                            player.setPlayWhenReady(true);
+                        }
                         motionDownXPosition = 0;
                         motionDownYPosition = 0;
-
+                        isHorizontalScrolling = false;
+                        isVerticalScrolling = false;
                         break;
                 }
                 return true;
             }
         });
+    }
+
+    private void handleTouchEvent(MotionEvent event) {
+        if (!isControlLocked) {
+            if (motionDownYPosition - event.getY() > 50 || event.getY() - motionDownYPosition > 50) {
+                isHorizontalScrolling = true;
+                isVerticalScrolling = false;
+            } else if (motionDownXPosition - event.getX() > 50 || event.getX() - motionDownXPosition > 50) {
+                isHorizontalScrolling = false;
+                isVerticalScrolling = true;
+            }
+            if (isHorizontalScrolling) {
+                if (event.getX() > getScreenHeightWidth()[0] / 2) { //right
+                    isControllingVolume = true;
+                    controlVolume(event);
+                } else if (event.getX() < getScreenHeightWidth()[0] / 2) {  //left
+                    isControllingBrightness = true;
+                    controlBrightness(event);
+                }
+            } else if (isVerticalScrolling) {
+                controlPlayback(event);
+            }
+        }
+
     }
 
     private void findIds() {
@@ -269,7 +294,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         int mediavolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int newMediaVolume = mediavolume;
-        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume,24);
+        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume, 24);
         if (newMediaVolume > maxVol) {
             newMediaVolume = maxVol;
         } else if (newMediaVolume < 1) {
@@ -282,7 +307,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void controlBrightness(MotionEvent event) {
         int newBrightness = brightness;
-        newBrightness = getNewSwipedValue(event, brightness, newBrightness,100);
+        newBrightness = getNewSwipedValue(event, brightness, newBrightness, 100);
         if (newBrightness > 100) {
             newBrightness = 100;
         } else if (newBrightness < 1) {
@@ -291,18 +316,37 @@ public class VideoPlayerActivity extends AppCompatActivity {
         WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
         layoutParams.screenBrightness = (float) newBrightness / 100;
         getWindow().setAttributes(layoutParams);
-        if(newBrightness/6 >= 15){
+        if (newBrightness / 6 >= 15) {
             counter.setText("15");
-        }else if(newBrightness/6 <= 1){
+        } else if (newBrightness / 6 <= 1) {
             counter.setText("1");
-        }else{
-            counter.setText(String.valueOf(newBrightness/6));
+        } else {
+            counter.setText(String.valueOf(newBrightness / 6));
         }
         brightness = newBrightness;
 
     }
 
-    private int getNewSwipedValue(MotionEvent event, int value, int newValue,int pixelDiff) {
+    private void controlPlayback(MotionEvent event) {
+        player.setPlayWhenReady(false);
+        long currentDuration = player.getContentPosition();
+        long totalDuration = player.getDuration();
+        float newDuration = currentDuration;
+        if (motionDownXPosition > event.getX()) { //swiped left
+            newDuration = currentDuration - 1000;
+        } else if (motionDownXPosition < event.getX()) { //swiped right
+            newDuration = currentDuration + 1000;
+        }
+        if (newDuration >= totalDuration) {
+            newDuration = totalDuration;
+        } else if (newDuration <= 0) {
+            newDuration = 0;
+        }
+        player.seekTo((long) newDuration);
+        Log.d("dura", String.valueOf(newDuration));
+    }
+
+    private int getNewSwipedValue(MotionEvent event, int value, int newValue, int pixelDiff) {
         int threshold = playerHeight / pixelDiff;
         int swipeDifference = 0;
         bottomContainer.setVisibility(View.GONE);
