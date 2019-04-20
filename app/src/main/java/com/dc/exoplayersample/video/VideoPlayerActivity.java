@@ -176,20 +176,18 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void findIds() {
-        //View customControllerView = LayoutInflater.from(this).inflate(R.layout.video_player_custom_controller, null);
         constraintlayout = findViewById(R.id.constraintLayout);
         simpleExoPlayerView = findViewById(R.id.simpleExoPlayerView);
         description = findViewById(R.id.description);
         progress = findViewById(R.id.progress);
-
-        bottomContainer = findViewById(R.id.bottomContainer);
-        topContainer = findViewById(R.id.topContainer);
-        screenRotation = findViewById(R.id.screenRotation);
-        controllerLock = findViewById(R.id.controllerLock);
-        title = findViewById(R.id.title);
-        playPause = findViewById(R.id.playPause);
-        back = findViewById(R.id.back);
-        counter = findViewById(R.id.counter);
+        bottomContainer = simpleExoPlayerView.findViewById(R.id.bottomContainer);
+        topContainer = simpleExoPlayerView.findViewById(R.id.topContainer);
+        screenRotation = simpleExoPlayerView.findViewById(R.id.screenRotation);
+        controllerLock = simpleExoPlayerView.findViewById(R.id.controllerLock);
+        title = simpleExoPlayerView.findViewById(R.id.title);
+        playPause = simpleExoPlayerView.findViewById(R.id.playPause);
+        back = simpleExoPlayerView.findViewById(R.id.back);
+        counter = simpleExoPlayerView.findViewById(R.id.counter);
 
     }
 
@@ -298,10 +296,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
         int mediavolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int newMediaVolume = mediavolume;
-        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume, 24);
-        if (newMediaVolume > maxVol) {
+        newMediaVolume = getNewSwipedValue(event, mediavolume, newMediaVolume, 1);
+        if (newMediaVolume >= maxVol) {
             newMediaVolume = maxVol;
-        } else if (newMediaVolume < 1) {
+        } else if (newMediaVolume <= 0) {
             newMediaVolume = 0;
         }
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newMediaVolume, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
@@ -311,22 +309,16 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void controlBrightness(MotionEvent event) {
         int newBrightness = brightness;
-        newBrightness = getNewSwipedValue(event, brightness, newBrightness, 100);
-        if (newBrightness > 100) {
+        newBrightness = getNewSwipedValue(event, brightness, newBrightness, 10);
+        if (newBrightness >= 100) {
             newBrightness = 100;
-        } else if (newBrightness < 1) {
-            newBrightness = 1;
+        } else if (newBrightness <= 0) {
+            newBrightness = 0;
         }
         WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
         layoutParams.screenBrightness = (float) newBrightness / 100;
         getWindow().setAttributes(layoutParams);
-        if (newBrightness / 6 > 15) {
-            counter.setText(String.valueOf((newBrightness / 6) - 1));
-        } else if (newBrightness / 6 < 1) {
-            counter.setText(String.valueOf((newBrightness / 6) + 1));
-        } else {
-            counter.setText(String.valueOf(newBrightness / 6));
-        }
+        counter.setText(String.valueOf(newBrightness / 10));
         brightness = newBrightness;
 
     }
@@ -357,13 +349,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
         long hours = TimeUnit.MILLISECONDS.toHours(player.getCurrentPosition());
         long minutes = TimeUnit.MILLISECONDS.toMinutes(player.getCurrentPosition()) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(player.getCurrentPosition()));
         long seconds = TimeUnit.MILLISECONDS.toSeconds(player.getCurrentPosition()) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(player.getCurrentPosition()));
-        String miliSecToHMS = String.format(Locale.ENGLISH,"%02d.%02d.%02d",hours,minutes,seconds);
-        counter.setText(miliSecToHMS);
+        String milliSecToHMS = String.format(Locale.ENGLISH,"%02d.%02d.%02d",hours,minutes,seconds);
+        counter.setText(milliSecToHMS);
 
     }
 
-    private int getNewSwipedValue(MotionEvent event, int value, int newValue, int pixelDiff) {
-        int threshold = playerHeight / pixelDiff;
+    private int getNewSwipedValue(MotionEvent event, int value, int newValue, int step) {
+        int threshold = 50;
         int swipeDifference;
         bottomContainer.setVisibility(View.GONE);
         playPause.setVisibility(View.GONE);
@@ -372,14 +364,14 @@ public class VideoPlayerActivity extends AppCompatActivity {
         if (motionDownYPosition > event.getY()) { // swiped up
             swipeDifference = (int) (motionDownYPosition - event.getY());
             if (swipeDifference > threshold) {
-                newValue = value + (swipeDifference / threshold);
+                newValue = value + step;
                 motionDownYPosition = event.getY();
                 simpleExoPlayerView.showController();
             }
         } else if (motionDownYPosition < event.getY()) {  //swiped down
             swipeDifference = (int) (event.getY() - motionDownYPosition);
             if (swipeDifference > threshold) {
-                newValue = value - (swipeDifference / threshold);
+                newValue = value - step;
                 motionDownYPosition = event.getY();
                 simpleExoPlayerView.showController();
             }
